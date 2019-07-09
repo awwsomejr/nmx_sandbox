@@ -16,7 +16,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def load_mongo():
-    conn = Connection('mongodb://user:password@172.16.168.111/admin')
+    conn = Connection('mongodb://user:password@172.x.x.x/admin')
    
     return conn.nmx
 
@@ -83,7 +83,7 @@ def get_username():
 ############################
 def main():
   NETWORKGRP = []
-  nmxs = ["10.248.219.184", "10.248.219.188", "10.248.219.186", "10.248.219.190"]
+  nmxs = ["10.x.x.x", "10.x.x.x", "10.x.x.x", "10.x.x.x"]
   #nmxs = ["10.248.219.186"]
   db  = load_mongo()
   drop_mongodb(db)
