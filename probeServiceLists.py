@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#Author: Basil Morrison
 import time
 import json
 import requests
@@ -17,8 +18,8 @@ IDS = []
 
 
 def load_mongo():
-    conn = Connection('mongodb://dsops:generic1@172.16.168.111/admin')
-    #conn = Connection('dsops1', 27017)
+    conn = Connection('mongodb://user:password@172.x.x.x/admin')
+   
     return conn.nmx
 
 def drop_mongodb(db):
@@ -78,16 +79,16 @@ def get_base_url():
     return "https://"
 #############################
 def get_password():
-    return 'harmonic'
+    return 'password'
 
 ############################
 def get_username():
-    return 'Administrator'
+    return 'user'
 
 ############################
 def main():
-  nmxs = ["10.248.219.186", "10.248.219.184", "10.248.219.190", "10.248.219.188"]
-  #nmxs = ["10.248.219.186"]
+  nmxs = ["10.x.x.x", "10.x.x.x", "10.x.x.x", "10.x.x.x"]
+  
   db  = load_mongo()
   drop_mongodb(db)
   for i in nmxs:
