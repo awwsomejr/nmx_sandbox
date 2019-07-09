@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#Author: Basil Morrison
 import time
 import json
 import requests
@@ -17,8 +18,8 @@ PORTLIST = []
 
 
 def load_mongo():
-    conn = Connection('mongodb://dsops:generic1@172.16.168.111/admin')
-    #conn = Connection('dsops1', 27017)
+    conn = Connection('mongodb://user:password@172.16.168.111/admin')
+    
     return conn.nmx
 
 def drop_mongodb(db):
@@ -78,11 +79,11 @@ def get_base_url():
     return "https://"
 #############################
 def get_password():
-    return 'harmonic'
+    return 'password'
 
 ############################
 def get_username():
-    return 'Administrator'
+    return 'user'
 
 ############################
 def main():
