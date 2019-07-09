@@ -84,7 +84,7 @@ def get_username():
 def main():
   NETWORKGRP = []
   nmxs = ["10.x.x.x", "10.x.x.x", "10.x.x.x", "10.x.x.x"]
-  #nmxs = ["10.248.219.186"]
+  
   db  = load_mongo()
   drop_mongodb(db)
   for i in nmxs:
