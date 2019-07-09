@@ -10,7 +10,7 @@ from pymongo import MongoClient
 
 client = MongoClient()
 
-client = MongoClient("mongodb://user:password@172.16.111.111/admin")
+client = MongoClient("mongodb://user:password@172.x.x.x/admin")
 db = client['nmx']
 
 collection = db['nmx_orangeburg_devices']
@@ -194,11 +194,11 @@ class buildChannel:
             r = requests.post(url2, json=data, verify=False, headers=head)
             print (r.status_code, r.reason)
         def get_username():
-             return 'Administrator'
+             return 'user'
         def get_base_url():
              return "https://" + self.cli.nmx
         def get_password():
-             return 'harmonic'
+             return 'password'
         def authenticate():
             username = get_username()
             password = get_password()
@@ -326,11 +326,11 @@ class buildChannel:
             discoveredSources = json.loads(stat.content)
             return discoveredSources
         def get_username():
-            return 'Administrator'
+            return 'user'
         def get_base_url():
             return "https://" + self.cli.nmx
         def get_password():
-            return 'harmonic'
+            return 'password'
         def authenticate():
            username = get_username()
            password = get_password()
