@@ -219,7 +219,7 @@ class buildChannel:
             discoveredSources = json.loads(stat.content)
             return discoveredSources
         def get_username():
-            return 'admin'
+            return 'user'
         def get_base_url():
             return "https://" + self.cli.nmx
         def get_password():
