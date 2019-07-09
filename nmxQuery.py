@@ -8,7 +8,7 @@ from pymongo import MongoClient
 
 
 client = MongoClient()
-client = MongoClient("mongodb://user:password@172.16.168.111/admin")
+client = MongoClient("mongodb://user:password@172.x.x.x/admin")
 db = client['nmx']
 
 orIn = []
