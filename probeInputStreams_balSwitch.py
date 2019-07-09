@@ -18,7 +18,7 @@ PORTLIST = []
 
 
 def load_mongo():
-    conn = Connection('mongodb://user:password@172.16.168.111/admin')
+    conn = Connection('mongodb://user:password@172.x.x.x/admin')
     
     return conn.nmx
 
