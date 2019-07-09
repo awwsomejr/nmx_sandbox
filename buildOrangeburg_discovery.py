@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-#
+#Author: Basil Morrison
+
 import pprint
 import requests
 import sys, os, re, traceback
