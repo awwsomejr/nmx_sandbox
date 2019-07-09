@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+#Author: Basil Morrison
 #######################
 import pprint
 import sys, os, re, traceback
@@ -7,7 +8,7 @@ from pymongo import MongoClient
 
 
 client = MongoClient()
-client = MongoClient("mongodb://dsops:generic1@172.16.168.111/admin")
+client = MongoClient("mongodb://user:password@172.16.168.111/admin")
 db = client['nmx']
 
 orIn = []
