@@ -1,14 +1,14 @@
-./buildOrangeburg_select.py -T hd -x 10.250.69.221 -e ElecEncoder-01 -ip 5 -op 7 -bkmc 9.9.9.9 -bkpt 10000 -bksr 7.7.7.7 -prip 6.6.6.6 -prpt 11000 -prsr 5.5.5.5 -sn 'OPERATIONS2' -slpcr 1234 -slpid 1111 -slnum 1 -slpcrr 3333 -slpidd 4444 -slnumm 1 -trid 24 -mpa 71 -mpaa 72 -mpaaa 73 -mpv 77 -avca 61 -avcaa 62 -avcaaa 63 -avcv 66 -opcrpid 10 -opmtpid 20 -opmtPID 30 -osdtpid 40 -oaudpid 50 -ovidpid 60 -oaudpidd 70 -opatpid 80 -onetid 1 -oscvnum 100 -outMulti 10.250.15.11 -outDprt 120 -outSrc 10.250.60.25 -outSprt 140000 -outDprtt 15020 -outSrcc 16000 -otrid 12
+./buildOrangeburg_select.py -T hd -x 10.x.x.x -e ElecEncoder-01 -ip 5 -op 7 -bkmc 9.9.9.9 -bkpt 10000 -bksr 7.7.7.7 -prip 6.6.6.6 -prpt 11000 -prsr 5.5.5.5 -sn 'OPERATIONS2' -slpcr 1234 -slpid 1111 -slnum 1 -slpcrr 3333 -slpidd 4444 -slnumm 1 -trid 24 -mpa 71 -mpaa 72 -mpaaa 73 -mpv 77 -avca 61 -avcaa 62 -avcaaa 63 -avcv 66 -opcrpid 10 -opmtpid 20 -opmtPID 30 -osdtpid 40 -oaudpid 50 -ovidpid 60 -oaudpidd 70 -opatpid 80 -onetid 1 -oscvnum 100 -outMulti 10.250.15.11 -outDprt 120 -outSrc 10.250.60.25 -outSprt 140000 -outDprtt 15020 -outSrcc 16000 -otrid 12
 
 
-./buildOrangeburg_select.py -T hdabr -x 10.250.69.221 -e ElecEncoder-01 -ip 5 -op 7 -abrmc 8.8.8.8 -abrsrc 7.7.7.7 -abrprt 55000 -abrpcrpid 111 -abrpmtpid 222 -abrsvcnum 9 -abrprov Basil -abrpid 333 -abrpidd 444 -abrpiddd 555 -abrpidddd 777 -abrpiddddd 888 -abrtrid 29 -sn OPERATIONS -abrtrid 987 -oabrpcr 123 -oabrmc 9.8.7.6 -oabrprt 88880 -oabrsrc 6.7.8.9 -oslapid 98 -oslapidd 87 -oslapiddd 76 -oslapidddd 67 -oslapiddddd 65 -onetid 365 -otrid 653
+./buildOrangeburg_select.py -T hdabr -x 10.x.x.x -e ElecEncoder-01 -ip 5 -op 7 -abrmc 8.8.8.8 -abrsrc 7.7.7.7 -abrprt 55000 -abrpcrpid 111 -abrpmtpid 222 -abrsvcnum 9 -abrprov Basil -abrpid 333 -abrpidd 444 -abrpiddd 555 -abrpidddd 777 -abrpiddddd 888 -abrtrid 29 -sn OPERATIONS -abrtrid 987 -oabrpcr 123 -oabrmc 9.8.7.6 -oabrprt 88880 -oabrsrc 6.7.8.9 -oslapid 98 -oslapidd 87 -oslapiddd 76 -oslapidddd 67 -oslapiddddd 65 -onetid 365 -otrid 653
 
 ./discoverPorts.py -T hd -e ElecEncoder-01
 
-./buildOrangeburg_select_discover3.py -T hd -x 10.250.69.221 -e ElecEncoder-01 -ip 5 -op 7 -abrmc 239.5.16.186 -abrsrc 10.248.200.102 -sn Food -oabrmc 239.5.5.5 -oabrprt 9001 -oabrsrc 1.250.60.111 -oslapid 111 -oslapidd 222 -oslapiddd 333 -oslapidddd 444 -oslapiddddd 555 -onetid 999 -otrid 888 -oabrprt 9001 -oabrprtt 9002 -oabrprttt 9003 -oabrprtttt 9004 -oabrprttttt 9005
+./buildOrangeburg_select_discover3.py -T hd -x 10.x.x.x -e ElecEncoder-01 -ip 5 -op 7 -abrmc 239.x.x.x -abrsrc 10.x.x.x -sn Food -oabrmc 239.5.5.5 -oabrprt 9001 -oabrsrc 1.250.60.111 -oslapid 111 -oslapidd 222 -oslapiddd 333 -oslapidddd 444 -oslapiddddd 555 -onetid 999 -otrid 888 -oabrprt 9001 -oabrprtt 9002 -oabrprttt 9003 -oabrprtttt 9004 -oabrprttttt 9005
 
-./buildOrangeburg_discovery.py -T hd -x 10.250.69.221 -e ElecEncoder-01 -ip 5 -op 7 -mc 239.5.16.186 -src 10.248.200.102 -sn Food -abrpcrpid 1010 -abrpmtpid 2020 -abrsvcnum 1 -abrprov Turner -abrpid 10 -abrpidd 20 -abrpiddd 30 -abrpidddd 40 -abrpiddddd 50 -abrpidddddd 60 -abrtrid 40 -abrmc 1.2.3.4 -abrsrc 4.3.2.1
+./buildOrangeburg_discovery.py -T hd -x 10.x.x.x -e ElecEncoder-01 -ip 5 -op 7 -mc 239.x.x.x -src 10.x.x.x -sn Food -abrpcrpid 1010 -abrpmtpid 2020 -abrsvcnum 1 -abrprov Turner -abrpid 10 -abrpidd 20 -abrpiddd 30 -abrpidddd 40 -abrpiddddd 50 -abrpidddddd 60 -abrtrid 40 -abrmc 1.2.3.4 -abrsrc 4.3.2.1
 
 
-./discoverInput.py -T hd -x 10.250.69.221 -mc 232.9.253.37 -src 10.249.33.78
+./discoverInput.py -T hd -x 10.x.x.x -mc 232.x.x.x -src 10.x.x.x
 
