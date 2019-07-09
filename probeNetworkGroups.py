@@ -74,11 +74,11 @@ def get_base_url():
     return "https://"
 #############################
 def get_password():
-    return 'harmonic'
+    return 'password'
 
 ############################
 def get_username():
-    return 'Administrator'
+    return 'user'
 
 ############################
 def main():
