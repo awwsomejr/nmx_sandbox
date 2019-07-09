@@ -9,7 +9,7 @@ from pymongo import MongoClient
 
 client = MongoClient()
 
-client = MongoClient("mongodb://user:password@172.16.100.11/admin")
+client = MongoClient("mongodb://user:password@172.x.x.x/admin")
 db = client['nmx']
 
 collection = db['nmx_orangeburg_devices']
@@ -276,11 +276,11 @@ class buildChannel:
              token = x['access_token']
              return token
         def get_base_url():
-              return "https://10.250.69.221"
+              return "https://10.x.x.x"
         def get_password():
-             return 'harmonic'
+             return 'passworld'
         def get_username():
-             return 'Administrator'
+             return 'user'
         token = authenticate()
         post = postService(token, result)
         #########################
