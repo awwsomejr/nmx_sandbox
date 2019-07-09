@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+#Author: Basil Morrison
 
 import pprint
 import requests
@@ -8,7 +9,7 @@ from pymongo import MongoClient
 
 client = MongoClient()
 
-client = MongoClient("mongodb://dsops:generic1@172.16.168.111/admin")
+client = MongoClient("mongodb://user:password@172.16.100.11/admin")
 db = client['nmx']
 
 collection = db['nmx_orangeburg_devices']
