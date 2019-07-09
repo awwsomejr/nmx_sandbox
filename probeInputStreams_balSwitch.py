@@ -79,15 +79,15 @@ def get_base_url():
     return "https://"
 #############################
 def get_password():
-    return 'harmonic'
+    return 'password'
 
 ############################
 def get_username():
-    return 'Administrator'
+    return 'user'
 
 ############################
 def main():
-  nmxs = ["10.248.219.186", "10.248.219.184", "10.248.219.190", "10.248.219.188"]
+  nmxs = ["10.x.x.x", "10.x.x.x", "10.x.x.x", "10.x.x.x"]
   db  = load_mongo()
   drop_mongodb(db)
   for i in nmxs:
