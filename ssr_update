@@ -63,7 +63,7 @@ def create_bin(curRegIds):
     return binary_str
 
 def connetToCafeDb(schema):
-    db = mysql.connector.connect(host='172.16.168.95', database=schema, user='dsops', password='!MyGeNeRiC1!')
+    db = mysql.connector.connect(host='172.16.168.95', database=schema, user='user', password='password')
     return db
 
 def checkDataValidity(curRegId, newRegId):
@@ -367,9 +367,8 @@ class applyChangesToSSR:
         self.primarySsr = primarySsr
         self.secondarySsr = secondarySsr
         self.port = 22
-        self.username = 'root'
-        self.password = 'get2know'
-        #user ndsuser pass ndsuser@Cablevision
+        self.username = 'user'
+        self.password = 'passoord'
         self.lSqlPath = '/home/dsops/scripts/ssr/tmp_sql/shuff.sql'
         self.rSqlPath = '/home/ndsuser/scripts/shuffle.sql'
         self.cmd = 'touch /home/ndsuser/scripts/HelloWorld.txt' #change this
