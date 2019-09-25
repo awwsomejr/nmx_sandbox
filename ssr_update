@@ -1,0 +1,491 @@
+#!/usr/bin/env python3
+#Author: Basil Morrison
+#Usage 1: ./ssrShuff3.py -opt atb -ssr SSR_LIPK -bid 1245 -ssk 6789
+#Usage 2: ./ssrShuff3.py -opt sh -ssr SSR_LIPK -os 199 -of 783 -nf 789 -crid 2,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19 -nrid 2,5,6,7,8,9,10,11,12,13,14,17,18,19 -drid 4,16
+#Usage 3: ./ssrShuff3.py -opt atb -ssr SSR_LIPK -bid 1245 -ssk 6789
+#Usage 4: ./ssrShuff3.py -opt rsi -ssr SSR_LIPK -nsvcn 'EESTRE' -svcn 'estre' -svcd Eestre
+
+import pprint
+import paramiko
+import sys, time, os, re, traceback
+import argparse, json
+import mysql.connector
+from mysql.connector import Error
+
+def parseCommandLine(program_description="Get Shuffle Data"):
+    parser=argparse.ArgumentParser(description=program_description)
+    parser.add_argument("-opt","--option",help='project option',default=False)
+    parser.add_argument("-bid","--bouqId",help='Bouquet ID',default=False)
+    parser.add_argument("-ssk","--siSvcKey",help='SI Service Key',default=False)
+    parser.add_argument("-ssr","--strSvr",help='Stream Server',default=False)
+    parser.add_argument("-os","--outStr",help='Out Stream',default=False)
+    parser.add_argument("-nos","--nOutStr",help='New Out Stream',default=False)
+    parser.add_argument("-of","--oldFr",help='Old Frequency',default=False)
+    parser.add_argument("-nf","--newFr",help='New Frequency',default=False)
+    parser.add_argument("-crid","--curRegId",help='Current Region ID',default=False)
+    parser.add_argument("-nrid","--newRegId",help='New Region ID',default=False)
+    parser.add_argument("-drid","--diffRegId",help='Diff Reg ID',default=False)
+    parser.add_argument("-svcn","--svcName",help='Service Name',default=False)
+    parser.add_argument("-nsvcn","--newSvcName",help='New Service Name',default=False)
+    parser.add_argument("-svcd","--svcDesc",help='Service Description',default=False)
+    parser.add_argument("-scid","--srcChanId",help='Source Channel ID',default=False)
+    parser.add_argument("-uides","--uiDescr",help='UI Description',default=False)
+    parser.add_argument("-scnot","--sourceNotes",help='Source Notes',default=False)
+
+    parseargs=parser.parse_args()
+    return parseargs
+
+def preamble():
+   pre = []
+   pre.append("set colsep ','")
+   pre.append("set linesize 1024")
+   pre.append("set pagesize 1024")
+   pre.append("set sqlprompt ''")
+   pre.append("set trimspool on")
+   pre.append("set headsep off")
+   pre.append("set heading off")
+   pre.append("set feedback off;")
+   return pre
+
+def create_bin(curRegIds):
+    binary = []
+    numList = []
+    spl = curRegIds.split(',')
+    for i in spl:
+        numList.append(int(i))
+    maxnum = max(numList)
+    for i in range(0, maxnum +1):
+        if str(i) in spl:
+            binary.append('1')
+        else:
+            binary.append('0')
+    binary_str = (''.join(map(str, binary)))
+    return binary_str
+
+def connetToCafeDb(schema):
+    db = mysql.connector.connect(host='172.16.168.95', database=schema, user='dsops', password='!MyGeNeRiC1!')
+    return db
+
+def checkDataValidity(curRegId, newRegId):
+    if re.search('[a-zA-Z]', curRegId):
+        print ('cur region ID \'' + curRegId + '\' is Invalid!  Verify data and try again.')
+        sys.exit()
+    if re.search('[a-zA-Z]', newRegId):
+        print ('new region ID \'' + newRegId + '\' is Invalid!  Verify data and try again.')
+        sys.exit()
+
+class modifySSR:
+        def __init__(self):
+            self.cli = parseCommandLine()
+            if not len(sys.argv) > 1:
+                print('No arguments provided.. Please provide arguments and try again')
+                sys.exit()
+            else:
+                if self.cli.option in 'sh':  #shuffle frequencies
+                     self.getSsrBinaries()
+                     self.createShuffleStmt()
+                elif self.cli.option in 'atb':  #add to bouquet
+                    self.addToBouquet(self.cli.strSvr)
+                elif self.cli.option in 'dfb':  #delete from bouquet
+                    self.deleteFromBouquet(self.cli.strSvr)
+                elif self.cli.option in 'csn':  #create service name
+                    self.createSiServiceName(self.cli.strSvr)
+                elif self.cli.option in 'csc':  #create source channel
+                    self.createSourceChannel(self.cli.strSvr)
+                elif self.cli.option in 'cod':  #create outstream delivery
+                    self.getSsrBinaries()
+                    self.createOutStreamDelivery(self.cli.strSvr)
+                elif self.cli.option in 'rsn':  #rebrand Source Channel
+                    self.rebrandSourceChannel(self.cli.strSvr)
+                elif self.cli.option in 'rsi':  #rebrand SI Service Name
+                    self.rebrandSiServiceName(self.cli.strSvr)
+                else:
+                    print('Invalid option!  Please try again.')
+
+        def createStmt(self,cli_ssr,tmp_stmt):
+            conn = connetToCafeDb(self.cli.strSvr)
+            cursor = conn.cursor()
+            SSR = []
+            SSR.append(tmp_stmt)
+            SSR.append("commit;")
+            SSR.append("exit")
+
+            return SSR
+
+        def rebrandSourceChannel(self, ssr):
+            header = preamble()
+            tmp_stmt = ('UPDATE ' + self.cli.strSvr + '.SOURCE_CHAN SET `NAME` +   = ' + '\'' + self.cli.newSvcName + '\'' + ', UI_DESCR = ' + '\'' + self.cli.uiDescr + '\'' + ', NOTES = ' + '\'' + self.cli.sourceNotes + '\'' + ' WHERE NAME = ' + '\'' + self.cli.svcName + '\'' + ';')
+            self.currStmt = self.createStmt(self.cli.strSvr,tmp_stmt)
+            sql_shuffle_stmt = header + self.currStmt
+            primarySsr = '10.248.99.89'
+            secondarySsr = '10.248.99.90'
+            child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+        def rebrandSiServiceName(self, ssr):
+            header = preamble()
+            tmp_stmt = ('UPDATE ' + self.cli.strSvr + '.SI_SERVICE_NAME SET `NAME`  = ' + '\'' + self.cli.newSvcName + '\'' + ', DESCR = ' + '\'' + self.cli.svcDesc + '\'' + ', SHORT_NAME = ' + '\'' + self.cli.newSvcName + '\'' + ' WHERE NAME = ' + '\'' + self.cli.svcName + '\'' + ';')
+            self.currStmt = self.createStmt(self.cli.strSvr,tmp_stmt)
+            sql_shuffle_stmt = header + self.currStmt
+            primarySsr = '10.248.99.89'
+            secondarySsr = '10.248.99.90'
+            child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+        def createSiServiceName(self, ssr):
+            header = preamble()
+            tmp_stmt = ("INSERT INTO " + self.cli.strSvr + ".SI_SERVICE_NAME (SI_SERVICE_KEY, NAME_ID, LANG, DEFAULT_LANG, NAME, PROVIDER, DESCR, SHORT_NAME, SHORT_PROVIDER) VALUES (" + '\'' + self.cli.siSvcKey + '\'' + ", " + "'0'" ", " + "'eng'" + ", " + "'1'" + ", " '\'' + self.cli.svcName + '\'' + ", 'Cablevision', " + '\'' + self.cli.svcDesc + '\'' + ", " + '\'' + self.cli.svcName + '\'' + ", 'CVC');")
+            self.currStmt = self.createStmt(self.cli.strSvr,tmp_stmt)
+            sql_shuffle_stmt = header + self.currStmt
+            primarySsr = '10.248.99.89'
+            secondarySsr = '10.248.99.90'
+            child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+        def createSourceChannel(self, ssr):
+            header = preamble()
+            tmp_stmt = ("INSERT INTO " + self.cli.strSvr + ".SOURCE_CHAN (SOURCE_CHAN_ID, UI_DESC, NAME, ESS_ID, SHED_SOURCE, SHED_SOURCE_ALIAS, SYNC_SOURCE, SYNC_SOURCE_ALIAS, SYNC_SOURCE_ALIAS_SSR_ID, SYNC_SOURCE_ADDR_ID, SYNC_SOURCE_INT_ADDR, PRE_ROLL_TIME, ALARM_MODE, BARKER_CHAN_ID, TSP_STREAM_NUM, TSP_IN_SI_SERVICE_KEY, TSP_PCR_TYPE, MAX_START_OFFSET, NOTES, HARMONIC_STRM_OBJ_ID) VALUES (" + '\'' + self.cli.srcChanId + '\'' + ", " + '\'' + self.cli.uiDescr + '\'' + ", " + '\'' + self.cli.svcName + '\'' + "," + "'1'" + ", " + "'0'" + ", " + "''" + ", " +  "'0'" + ", " +  "'0'" + ", " + "''" + ", " + "'0'" + ", " +  "'0'" + ", " + "'0.00'" + ", " +  "'0'" + ", " +  "'0'" + ", " + "'0'" + ", " + "'0'" + ", " + "''" + ", " + "'0'" + ", " + "''" + ", " + "'0.00'" + ", " + '\'' + self.cli.sourceNotes + '\'' +  ", " + "'0'"");")
+            self.currStmt = self.createStmt(self.cli.strSvr,tmp_stmt)
+            sql_shuffle_stmt = header + self.currStmt
+            primarySsr = '10.248.99.89'
+            secondarySsr = '10.248.99.90'
+            child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+        def addToBouquet(self, ssr):
+            header = preamble()
+            tmp_stmt = ("INSERT INTO " + self.cli.strSvr + ".BOUQUET_UNIQUE_SERVICE (BOUQUET_ID, SI_SERVICE_KEY, SUB_BOUQUET_ID) VALUES (" + '\'' + self.cli.bouqId + '\'' + ", " + '\'' + self.cli.siSvcKey + '\'' + ",  '-1');")
+            self.currStmt = self.createStmt(self.cli.strSvr,tmp_stmt)
+            sql_shuffle_stmt = header + self.currStmt
+            primarySsr = '10.248.99.89'
+            secondarySsr = '10.248.99.90'
+            child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+        def deleteFromBouquet(self, ssr):
+            header = preamble()
+            tmp_stmt = ("DELETE FROM  " + self.cli.strSvr + ".BOUQUET_UNIQUE_SERVICE WHERE BOUQUET_ID =" + "\'" + self.cli.bouqId + "\'" + " AND SI_SERVICE_KEY =" + "\'" + self.cli.siSvcKey + "\'" + ";")
+            self.currStmt = self.createStmt(self.cli.strSvr,tmp_stmt)
+            sql_shuffle_stmt = header + self.currStmt
+            primarySsr = '10.248.99.89'
+            secondarySsr = '10.248.99.90'
+            child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+        def createOutStreamDelivery(self, ssr):
+            header = preamble()
+            tmp_stmt = ("INSERT INTO " + self.cli.strSvr + ".OUT_STREAM_DELIVERY (OUT_STREAM_ID, SI_OUT_STREAM_ID, DELIVERY_NUM, DELIVERY_TYPE, REGION_ID, FOOTPRINT_MASK, FREQUENCY, FEC_OUTER, MODULATI    ON, SYMBOL_RATE, FEC_INNER, ORBIT_POSITION, WEST_EAST_FLAG, POLARISATION, BANDWIDTH, CONSTELLATION, HIERARCHY, CODE_RATE_HP, CODE_RATE_LP, GUARD_INTERVAL, TRANSMISSION_MODE, OTHER_FREQUENCY, NOTES, SCTE_TX_SYSTEM, SCTE_SPLIT_MODE, ROLL_OFF, PLP_ID, T2_SYSTEM_ID, SISO_MISO_FLAG) VALUES (" + '\'' + self.cli.outStr + '\'' + ", '-1' , " + '\'' + str(self.new_uniqueness) + '\'' + ", '5', 'null', " + '\'' + self.diff_footprintMask + '\'' + ", " + '\'' + self.cli.newFr + '\'' + ", 'null', '16', '5360537', '3', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', '2', '0', '0', 'null', 'null', 'null');")
+            self.currStmt = self.createStmt(self.cli.strSvr,tmp_stmt)
+            sql_shuffle_stmt = header + self.currStmt
+            primarySsr = '10.248.99.89'
+            secondarySsr = '10.248.99.90'
+            child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+        def getSsrBinaries(self):
+            self.all_uniqueness = []
+            self.old_footprintMask = ''
+            self.new_footprintMask = ''
+            self.diff_footprintMask = ''
+            self.current_uniqueness = ''
+            self.SSR_LI = []
+            self.SSR_LIPK = []
+            self.SSR_NJ = []
+            self.SSR_NJPK = []
+            self.SSR_LI_ERR =[]
+            self.SSR_NJ_ERR = []
+            self.li = ''
+            self.lipk = ''
+            self.nj = ''
+            self.njpk = ''
+            self.cli.oldFr = (self.cli.oldFr + '0000')
+            self.cli.newFr = (self.cli.newFr + '0000')
+            curR = self.cli.curRegId
+            newR = self.cli.newRegId
+            checkDataValidity(curR, newR)
+            try:
+                #check if db is empty
+                conn = connetToCafeDb(self.cli.strSvr)
+                cursor = conn.cursor()
+                cursor.execute('SELECT COUNT(DELIVERY_NUM) FROM ' + self.cli.strSvr + '.OUT_STREAM_DELIVERY WHERE OUT_STREAM_ID = ' + self.cli.outStr + ' AND FOOTPRINT_MASK <> 0')
+                for count in cursor:
+                    if count[0] == 0:
+                       print('Outstream ID \"' + self.cli.outStr + '\" missing from  \"' + self.cli.strSvr + '\" schema on CafeDev. Please verify that database is updated and try again.')
+                       cursor.close()
+                       sys.exit()
+            except Error as e:
+                print(e)
+
+            try:
+                #used for to get all uniquenesses
+                conn = connetToCafeDb(self.cli.strSvr)
+                cursor = conn.cursor()
+                cursor.execute('SELECT DELIVERY_NUM FROM ' + self.cli.strSvr + '.OUT_STREAM_DELIVERY WHERE OUT_STREAM_ID = ' + self.cli.outStr + ' AND FOOTPRINT_MASK <> 0')
+
+                #get all uniqueness (will be used to create new uniqueness)
+                for count in cursor:
+                    self.all_uniqueness.append(count[0])
+                self.highestUniqueness = max(self.all_uniqueness)
+                self.new_uniqueness = self.highestUniqueness + 1
+                cursor.close()
+                print ('new uniqueness: ' + str(self.new_uniqueness))
+                newUniqueness = str(self.new_uniqueness)
+            except Error as e:
+                print(e)
+
+            try:
+                #current uniqueness
+                conn = connetToCafeDb(self.cli.strSvr)
+                cursor = conn.cursor()
+                cursor.execute('SELECT DELIVERY_NUM FROM ' + self.cli.strSvr + '.OUT_STREAM_DELIVERY WHERE OUT_STREAM_ID = ' + self.cli.outStr + ' AND FREQUENCY = ' + self.cli.oldFr + ' AND FOOTPRINT_MASK <> 0')
+                result = cursor.fetchone()
+                if result is None:
+                    print('current uniqueness:  null')
+                else:
+                    self.current_uniqueness = result[0]
+                    print('current uniqueness:' + str(self.current_uniqueness))
+                    oldUniqueness = str(self.current_uniqueness)
+                cursor.close()
+            except Error as e:
+                print (e)
+
+            try:
+            #Check whether I need to use for loop instead of 'fetchone()' method to get the contents of cursor
+                conn = connetToCafeDb(self.cli.strSvr)
+                cursor = conn.cursor()
+                cursor.execute('SELECT FOOTPRINT_MASK FROM ' + self.cli.strSvr + '.OUT_STREAM_DELIVERY WHERE OUT_STREAM_ID = ' + self.cli.outStr + ' AND FREQUENCY = ' + self.cli.oldFr + ' AND FOOTPRINT_MASK <> 0')
+                result = cursor.fetchone()
+                if result is None:
+                    print('old footprint_mask:  null')
+                else:
+                    self.old_footprintMask = result[0]
+                    print('old_footprint mask:' + str(self.old_footprintMask))
+                    oldFootprintmask = str(self.old_footprintMask)
+                cursor.close()
+            except Error as e:
+                print (e)
+
+            try:
+                #get new footprint mask
+                binary = create_bin(self.cli.newRegId) #binary conversion
+                conn = connetToCafeDb(self.cli.strSvr)
+                cursor = conn.cursor()
+                cursor.execute('SELECT CONV(REVERSE(' + binary + '), 2, 10) as FM')
+                result = cursor.fetchone()
+                self.new_footprintMask = result[0]
+                cursor.close()
+                print('new_footprint mask: ' + self.new_footprintMask)
+                newFootprintmask = self.new_footprintMask
+            except Error as e:
+                print(e)
+            try:
+                # get diff footprint mask
+                binary2 = create_bin(self.cli.diffRegId) #binary conversion
+                conn = connetToCafeDb(self.cli.strSvr)
+                cursor = conn.cursor()
+                cursor.execute('SELECT CONV(REVERSE(' + binary2 + '), 2, 10) as FM')
+                result = cursor.fetchone()
+                self.diff_footprintMask = result[0]
+                print('diff_footprint mask: ' + self.diff_footprintMask)
+                diffFootprintmask = self.diff_footprintMask
+                cursor.close()
+            except Error as e:
+                print(e)
+            ###############################################################################################################
+            #verify why I checked for 'self.exists'... also.. if this script is looped, do I need to clear 'self.exists' after each pass?
+            #Note:  If frequency or transport did not exist prior, INSERT SSR.OUT_STREAM_DELIVERY (<fields>) VALUES (<fields prior>, OUT_STREAM_ID=$out_str_id,
+            #FREQUENCY=$pad_old_freq, DELIVERY_NUM = $uniqueness WHERE OUT_STREAM_ID =  $out_str_id and DELIVERY_NUM=$out_str_id, <fields post>)...
+            #else UPDATE SSR.OUT_STREAM_DELIVERY SET OUT_STREAM_ID=$out_str_id, FREQUENCY=$pad_old_freq  WHERE OUT_STREAM_ID =  $out_str_id and
+            #DELIVERY_NUM=$new_uniqueness;...  Note:  check if I must clear self.exists after pass
+
+            try:
+                conn = connetToCafeDb(self.cli.strSvr)
+                cursor = conn.cursor()
+                cursor.execute('SELECT COUNT(*) FROM ' + self.cli.strSvr + '.OUT_STREAM_DELIVERY WHERE OUT_STREAM_ID = ' + self.cli.outStr + ' OR FREQUENCY = ' + self.cli.oldFr)
+                result = cursor.fetchone()
+                self.exists = result[0]
+                print('LI & NJ freq/outstream count: ' + str(self.exists))
+            except Error as e:
+                print(e)
+            #print (newUniqueness, oldUniqueness, oldFootprintmask, newFootprintmask, diffFootprintmask)
+            return newUniqueness, oldUniqueness, oldFootprintmask, newFootprintmask, diffFootprintmask
+
+
+        def createShuffleStmt(self):
+            def shuffLegacy(cli_ssr,SSR):
+                if cli_ssr_ in 'SSR_NJ' or cli_ssr in 'SSR_LI':
+                    if self.current_uniqueness is not '' or self.old_footprintMask is not '':
+                       if self.exists == 0:
+                           SSR.append("INSERT INTO " + cli_ssr + ".OUT_STREAM_DELIVERY (OUT_STREAM_ID, SI_OUT_STREAM_ID, DELIVERY_NUM, DELIVERY_TYPE, REGION_ID, FOOTPRINT_MASK, FREQUENCY, FEC_OUTER, MODULATI    ON, SYMBOL_RATE, FEC_INNER, ORBIT_POSITION, WEST_EAST_FLAG, POLARISATION, BANDWIDTH, CONSTELLATION, HIERARCHY, CODE_RATE_HP, CODE_RATE_LP, GUARD_INTERVAL, TRANSMISSION_MODE, OTHER_FREQUENCY, NOTES, SCTE_TX_SYSTEM, SCTE_SPLIT_MODE, ROLL_OFF, PLP_ID, T2_SYSTEM_ID, SISO_MISO_FLAG) VALUES (" + '\'' + self.cli.outStr + '\'' + ", '-1' , " + '\'' + str(self.new_uniqueness) + '\'' + ", '5', 'null', " + '\'' + self.diff_footprintMask + '\'' + ", " + '\'' + self.cli.newFr + '\'' + ", 'null', '16', '5360537', '3', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', '2', '0', '0', 'null', 'null', 'null');")
+                           SSR.append("commit;")
+                           SSR.append("exit")
+                       else:
+                           SSR.append('UPDATE ' + cli_ssr + '.OUT_STREAM_DELIVERY SET FREQUENCY=' + self.cli.oldFr + ', DELIVERY_NUM = $uniqueness WHERE OUT_STREAM_ID = ' + self.cli.outStr + ';')
+                           SSR.append("commit;")
+                           SSR.append("exit")
+                    else:
+                        SSR_ERR.append(self.cli.strSvr,self.cli.outStr,self.cli.oldFr,self.cli.curRegId)
+                return SSR
+
+            def shuffPowerKey(cli_ssr,SSR):
+                SSR = []
+                if cli_ssr in 'SSR_LIPK' or cli_ssr in 'SSR_NJPK':
+                    SSR.append("UPDATE " + cli_ssr + ".OUT_STREAM_DELIVERY SET FOOTPRINT_MASK = " + self.new_footprintMask + ", FREQUENCY=" + self.cli.oldFr + ", DELIVERY_NUM = " + str(self.current_uniqueness) + " WHERE FOOTPRINT_MASK = " + str(self.old_footprintMask) + " AND OUT_STREAM_ID =  " + self.cli.outStr + ";")
+                    SSR.append("commit;")
+                    SSR.append("INSERT INTO " + cli_ssr + ".OUT_STREAM_DELIVERY (OUT_STREAM_ID, SI_OUT_STREAM_ID, DELIVERY_NUM, DELIVERY_TYPE, REGION_ID, FOOTPRINT_MASK, FREQUENCY, FEC_OUTER, MODULATI    ON, SYMBOL_RATE, FEC_INNER, ORBIT_POSITION, WEST_EAST_FLAG, POLARISATION, BANDWIDTH, CONSTELLATION, HIERARCHY, CODE_RATE_HP, CODE_RATE_LP, GUARD_INTERVAL, TRANSMISSION_MODE, OTHER_FREQUENCY, NOTES, SCTE_TX_SYSTEM, SCTE_SPLIT_MODE, ROLL_OFF, PLP_ID, T2_SYSTEM_ID, SISO_MISO_FLAG) VALUES (" + '\'' + self.cli.outStr + '\'' + ", '-1' , " + '\'' + str(self.new_uniqueness) + '\'' + ", '5', 'null', " + '\'' + self.diff_footprintMask + '\'' + ", " + '\'' + self.cli.newFr + '\'' + ", 'null', '16', '5360537', '3', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', 'null', '2', '0', '0', 'null', 'null', 'null');")
+                    SSR.append("commit;")
+                    SSR.append("exit")
+                return SSR
+
+            if self.cli.strSvr in 'SSR_LI':
+                   header = preamble()
+                   self.li = shuffLegacy(self.cli.strSvr,'SSR_LI')
+                   sql_shuffle_stmt = header + self.li
+                   primarySsr = '10.248.99.89'
+                   secondarySsr = '10.248.99.90'
+                   child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+            if self.cli.strSvr in 'SSR_LIPK':
+                   header = preamble()
+                   self.lipk = shuffPowerKey(self.cli.strSvr,'SSR_LIPK')
+                   sql_shuffle_stmt = header + self.lipk
+                   primarySsr = '10.248.99.89'
+                   secondarySsr = '10.248.99.90'
+                   child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+            if self.cli.strSvr in 'SSR_NJ':
+                   header = preamble()
+                   self.nj = shuffLegacy(self.cli.strSvr,'SSR_NJ')
+                   sql_shuffle_stmt = header + self.nj
+                   primarySsr = '10.248.99.89'
+                   secondarySsr = '10.248.99.90'
+                   child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+            if self.cli.strSvr in 'SSR_NJPK':
+                   header = preamble()
+                   self.njpk = shuffPowerKey(self.cli.strSvr,'SSR_NJPK')
+                   sql_shuffle_stmt = header + self.njpk
+                   primarySsr = '10.248.99.89'
+                   secondarySsr = '10.248.99.90'
+                   child = applyChangesToSSR(sql_shuffle_stmt, primarySsr, secondarySsr)
+
+class applyChangesToSSR:
+    def __init__(self, sql_shuffle_stmt, primarySsr, secondarySsr):
+        self.primarySsr = primarySsr
+        self.secondarySsr = secondarySsr
+        self.port = 22
+        self.username = 'root'
+        self.password = 'get2know'
+        #user ndsuser pass ndsuser@Cablevision
+        self.lSqlPath = '/home/dsops/scripts/ssr/tmp_sql/shuff.sql'
+        self.rSqlPath = '/home/ndsuser/scripts/shuffle.sql'
+        self.cmd = 'touch /home/ndsuser/scripts/HelloWorld.txt' #change this
+        self.resp = ''
+        #############  make the changes ################
+        self.createSqlStmt(sql_shuffle_stmt)
+        self.stopSsr(secondarySsr)
+        self.stopSsr(primarySsr)
+        self.copyStmtToSsr()
+        self.runStmtOnSsr(primarySsr)
+        self.startSsr(primarySsr)
+        self.startSsr(secondarySsr)
+        ###############################################
+
+
+    def createSqlStmt(self, sql_shuffle_stmt):
+        with open("/home/dsops/scripts/ssr/tmp_sql/shuff.sql", "w") as stmt:
+            for i in sql_shuffle_stmt:
+                stmt.write(i + '\n')
+        return stmt
+
+    def stopSsr(self, ssr):
+        try:
+            self.ssh=paramiko.SSHClient()
+            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh.connect(ssr,self.port,self.username,self.password)
+            self.ssh.exec_command('nds_service nds_dsrv_usg stop')
+            self.ssh.exec_command('nds_service nds_usg stop')
+            self.verifyStop(ssr)
+            print('nds_dsrv_usg is stopped')
+        except Error as e:
+            print(e)
+
+    def startSsr(self, ssr):
+        try:
+            self.ssh=paramiko.SSHClient()
+            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh.connect(ssr,self.port,self.username,self.password)
+            self.ssh.exec_command('nds_service nds_dsrv_usg start')
+            self.ssh.exec_command('nds_service nds_usg start')
+            self.verifyStart(ssr)
+            print('nds_dsrv_usg is started')
+        except Error as e:
+            print(e)
+
+    def copyStmtToSsr(self):
+        try:
+            transport = paramiko.Transport((self.primarySsr, self.port))
+            transport.connect(username = self.username, password = self.password)
+            sftp = paramiko.SFTPClient.from_transport(transport)
+            sftp.put(self.lSqlPath, self.rSqlPath)
+            sftp.close()
+            transport.close()
+        except Error as e:
+            print(e)
+
+    def runStmtOnSsr(self, primarySsr):
+        try:
+            self.ssh=paramiko.SSHClient()
+            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh.connect(primarySsr,self.port,self.username,self.password)
+            stdin,stdout,stderr=self.ssh.exec_command(self.cmd)
+            outlines=stdout.readlines()
+            resp=''.join(outlines)
+            print(resp)
+        except Error as e:
+            print(e)
+
+    def verifyStop(self, ssr):
+        counter = 0
+        proc = 'nds_dsrv_usg'
+        while 'NOT' not in self.check_state_of_proc(ssr, proc):
+            if counter >= 20:
+                print ('There seems to be a problem with the nds_dsrv_usg service. Please check SSR and run the shuffle script again.')
+                sys.exit()
+            time.sleep(10)
+            counter += 1
+
+        counter = 0
+        proc = 'nds_usg'
+        while 'NOT' not in self.check_state_of_proc(ssr, proc):
+            if counter >= 20:
+                print ('There seems to be a problem with the nds_dsrv_usg service. Please check SSR and run the shuffle script again.')
+                sys.exit()
+            time.sleep(10)
+            counter += 1
+
+    def verifyStart(self, ssr):
+        counter = 0
+        proc = 'nds_dsrv_usg'
+        while 'NOT' not in self.check_state_of_proc(ssr, proc): #change back to (while 'NOT' in)
+            if counter >= 20:
+                print ('There seems to be a problem with the nds_dsrv_usg service. Please check SSR and run the shuffle script again.')
+                sys.exit()
+            time.sleep(10)
+            counter += 1
+
+        counter = 0
+        proc = 'nds_usg'
+        while 'NOT' not in self.check_state_of_proc(ssr, proc): #change back to (while 'NOT' in)
+            if counter >= 20:
+                print ('There seems to be a problem with the nds_dsrv_usg service. Please check SSR and run the shuffle script again.')
+                sys.exit()
+            time.sleep(10)
+            counter += 1
+
+    def check_state_of_proc(self, ssr, proc):
+        resp = proc + ' is NOT running'
+        self.ssh=paramiko.SSHClient()
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh.connect(ssr,self.port,self.username,self.password)
+        stdout = self.ssh.exec_command('nds_service')
+        for i in stdout:
+            if str(i) in proc:
+                if str(i) not in 'NOT':
+                    resp = proc + ' is running'
+        return resp
+
+modifySSR()
